@@ -10,6 +10,7 @@ local Config = {
     SpeedHack = false,
     SpeedMult = 0.4,
     NoClip = false,
+    Fly = false,
     AutoGun = false
 }
 
@@ -22,8 +23,8 @@ ScreenGui.ResetOnSpawn = false
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -190)
-MainFrame.Size = UDim2.new(0, 300, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -240)
+MainFrame.Size = UDim2.new(0, 300, 0, 480)
 MainFrame.Active = true
 MainFrame.Draggable = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
@@ -93,7 +94,9 @@ local AimbotBtn = createBtn("Аимбот на Убийцу: ВЫКЛ")
 local SkinBtn = createBtn("Выдать Godly Скины (Визуал)")
 local SpeedBtn = createBtn("Спидхак (Bypass): ВЫКЛ")
 local NoclipBtn = createBtn("NoClip (Сквозь стены): ВЫКЛ")
+local FlyBtn = createBtn("Полет (Fly): ВЫКЛ")
 local AutoGunBtn = createBtn("Забрать Пистолет (АвтоTP)")
+local TpMurdererBtn = createBtn("Телепорт к Убийце")
 local TpLobbyBtn = createBtn("Телепорт в Лобби")
 
 -- Определение ролей игроков
@@ -170,6 +173,12 @@ NoclipBtn.MouseButton1Click:Connect(function()
     NoclipBtn.BackgroundColor3 = Config.NoClip and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(45, 45, 45)
 end)
 
+FlyBtn.MouseButton1Click:Connect(function()
+    Config.Fly = not Config.Fly
+    FlyBtn.Text = Config.Fly and "Полет (Fly): ВКЛ" or "Полет (Fly): ВЫКЛ"
+    FlyBtn.BackgroundColor3 = Config.Fly and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(45, 45, 45)
+end)
+
 AutoGunBtn.MouseButton1Click:Connect(function()
     local gunDrop = workspace:FindFirstChild("GunDrop", true) or workspace:FindFirstChild("Gun", true)
     if gunDrop and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -182,13 +191,32 @@ AutoGunBtn.MouseButton1Click:Connect(function()
     AutoGunBtn.Text = "Забрать Пистолет (АвтоTP)"
 end)
 
+TpMurdererBtn.MouseButton1Click:Connect(function()
+    local found = false
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and getRole(p) == "Murderer" and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                found = true
+                TpMurdererBtn.Text = "ТП к " .. p.Name
+                break
+            end
+        end
+    end
+    if not found then
+        TpMurdererBtn.Text = "Убийца не найден!"
+    end
+    task.wait(1.5)
+    TpMurdererBtn.Text = "Телепорт к Убийце"
+end)
+
 TpLobbyBtn.MouseButton1Click:Connect(function()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-109, 138, 11)
     end
 end)
 
--- Стабильный цикл ESP (работает каждые 0.3 секунды без лагов)
+-- Стабильный цикл ESP (работает каждые 0.3 секунды)
 task.spawn(function()
     while task.wait(0.3) do
         if Config.ESP then
@@ -231,7 +259,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Аимбот и Спидхак в кадре
+-- Аимбот, Спидхак и Полет в кадре
 RunService.RenderStepped:Connect(function()
     -- Аимбот на Убийцу
     if Config.Aimbot then
@@ -249,6 +277,21 @@ RunService.RenderStepped:Connect(function()
         local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if hum and hrp and hum.MoveDirection.Magnitude > 0 then
             hrp.CFrame = hrp.CFrame + (hum.MoveDirection * Config.SpeedMult)
+        end
+    end
+
+    -- Полет (Fly)
+    if Config.Fly and LocalPlayer.Character then
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
+        if hrp and hum then
+            hrp.Velocity = Vector3.zero
+            local moveDir = hum.MoveDirection
+            if moveDir.Magnitude > 0 then
+                hrp.CFrame = hrp.CFrame + (Camera.CFrame.LookVector * (moveDir.Z * -1) + Camera.CFrame.RightVector * moveDir.X) * 1.2
+            else
+                hrp.CFrame = CFrame.new(hrp.CFrame.Position, hrp.CFrame.Position + Camera.CFrame.LookVector)
+            end
         end
     end
 end)
