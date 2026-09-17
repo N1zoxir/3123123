@@ -1,87 +1,134 @@
--- Убедимся, что скрипт выполняется в эксплойте (например, Delta)
+-- Убедимся, что скрипт выполняется в эксплойте (Delta)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- Настройки функции ESP и Аимбота
 local Config = {
     ESPEnabled = true,
-    AimbotEnabled = true,
-    AimbotKey = Enum.UserInputType.MouseButton2, -- Правая кнопка мыши для аима
-    AimbotSmoothness = 5 -- Плавность наводки (чем меньше, тем быстрее)
+    AimbotEnabled = false,
+    AimbotKey = Enum.UserInputType.MouseButton2, -- ПКМ для аима
+    AimbotSmoothness = 4, -- Плавность наведения
+    AutoPickGun = false
 }
 
 -- Создание графического интерфейса (GUI)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MM2_Menu"
+ScreenGui.Name = "MM2_AdvancedMenu"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
+-- Главное окно
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.Position = UDim2.new(0.5, -125, 0.5, -100)
-MainFrame.Size = UDim2.new(0, 250, 0, 200)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
+MainFrame.Size = UDim2.new(0, 300, 0, 350)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.CornerRadius = UDim.new(0, 10)
 UICorner.Parent = MainFrame
 
+-- Заголовок
 local Title = Instance.new("TextLabel")
 Title.Parent = MainFrame
-Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-Title.Size = UDim2.new(1, 0, 0, 35)
+Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Font = Enum.Font.GothamBold
-Title.Text = "MM2 Menu | Delta Optimized"
+Title.Text = "MM2 Ultimate Menu | Delta"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 14
+Title.TextSize = 15
 
 local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 8)
+TitleCorner.CornerRadius = UDim.new(0, 10)
 TitleCorner.Parent = Title
 
--- Кнопка ESP
-local EspBtn = Instance.new("TextButton")
-EspBtn.Parent = MainFrame
-EspBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-EspBtn.Position = UDim2.new(0.1, 0, 0.3, 0)
-EspBtn.Size = UDim2.new(0, 200, 0, 35)
-EspBtn.Font = Enum.Font.GothamBold
-EspBtn.Text = "ESP: ВКЛ"
-EspBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-EspBtn.TextSize = 14
+-- Кнопка сворачивания (-)
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Parent = Title
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+MinimizeBtn.Position = UDim2.new(1, -35, 0.5, -12)
+MinimizeBtn.Size = UDim2.new(0, 24, 0, 24)
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.TextSize = 16
 
-local BtnCorner1 = Instance.new("UICorner")
-BtnCorner1.CornerRadius = UDim.new(0, 6)
-BtnCorner1.Parent = EspBtn
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 4)
+MinCorner.Parent = MinimizeBtn
 
--- Кнопка Аимбота
-local AimbotBtn = Instance.new("TextButton")
-AimbotBtn.Parent = MainFrame
-AimbotBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-AimbotBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
-AimbotBtn.Size = UDim2.new(0, 200, 0, 35)
-AimbotBtn.Font = Enum.Font.GothamBold
-AimbotBtn.Text = "Аимбот на убийцу: ВКЛ"
-AimbotBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AimbotBtn.TextSize = 14
+-- Маленькая кнопка (когда свернуто)
+local SmallButton = Instance.new("TextButton")
+SmallButton.Name = "SmallButton"
+SmallButton.Parent = ScreenGui
+SmallButton.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+SmallButton.Position = UDim2.new(0.1, 0, 0.1, 0)
+SmallButton.Size = UDim2.new(0, 45, 0, 45)
+SmallButton.Visible = false
+SmallButton.Active = true
+SmallButton.Draggable = true
+SmallButton.Font = Enum.Font.GothamBold
+SmallButton.Text = "🔪"
+SmallButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SmallButton.TextSize = 22
 
-local BtnCorner2 = Instance.new("UICorner")
-BtnCorner2.CornerRadius = UDim.new(0, 6)
-BtnCorner2.Parent = AimbotBtn
+local SmallCorner = Instance.new("UICorner")
+SmallCorner.CornerRadius = UDim.new(0, 8)
+SmallCorner.Parent = SmallButton
 
--- Функция определения роли игрока в MM2
+MinimizeBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    SmallButton.Visible = true
+end)
+
+SmallButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    SmallButton.Visible = false
+end)
+
+-- Контейнер для кнопок
+local UIList = Instance.new("UIListLayout")
+UIList.Parent = MainFrame
+UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIList.SortOrder = Enum.SortOrder.LayoutOrder
+UIList.Padding = UDim.new(0, 8)
+
+-- Функция создания кнопок в меню
+local function createButton(text, order)
+    local btn = Instance.new("TextButton")
+    btn.Parent = MainFrame
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.Size = UDim2.new(0, 260, 0, 35)
+    btn.Font = Enum.Font.GothamBold
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 13
+    btn.LayoutOrder = order
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+    return btn
+end
+
+local EspBtn = createButton("ESP (Убийца:Красный / Шериф:Синий): ВКЛ", 1)
+local AimbotBtn = createButton("Нормальный Аимбот (на Убийцу): ВЫКЛ", 2)
+local AutoGunBtn = createButton("Авто-подбор пистолета: ВЫКЛ", 3)
+local SkinChangerBtn = createButton("Выдать Godly Скины (Скин-чейнджер)", 4)
+
+-- Функция точного определения роли в MM2
 local function getRole(player)
     if not player.Character then return "Innocent" end
     
-    -- Проверка на наличие оружия в руках или рюкзаке
     local backpack = player:FindFirstChild("Backpack")
     local character = player.Character
     
+    -- Проверка на наличие ножа или пистолета (руки + инвентарь)
     local hasKnife = character:FindFirstChild("Knife") or (backpack and backpack:FindFirstChild("Knife"))
     local hasGun = character:FindFirstChild("Gun") or (backpack and backpack:FindFirstChild("Gun"))
     
@@ -94,7 +141,7 @@ local function getRole(player)
     end
 end
 
--- Логика ESP (подсветка Highlight)
+-- Логика ESP (Подсветка)
 local highlights = {}
 
 local function updateESP()
@@ -117,12 +164,10 @@ local function updateESP()
                         hl.FillColor = Color3.fromRGB(255, 0, 0) -- Красный для убийцы
                         hl.OutlineColor = Color3.fromRGB(255, 255, 255)
                     elseif role == "Sheriff" then
-                        hl.FillColor = Color3.fromRGB(0, 0, 255) -- Синий для шерифа
+                        hl.FillColor = Color3.fromRGB(0, 100, 255) -- Синий для шерифа
                         hl.OutlineColor = Color3.fromRGB(255, 255, 255)
                     else
-                        hl.FillColor = Color3.fromRGB(0, 255, 0) -- Зеленый для остальных (или можно скрыть)
-                        hl.OutlineColor = Color3.fromRGB(0, 0, 0)
-                        hl.Enabled = false -- Невинных не подсвечиваем, чтобы не засорять экран
+                        hl.Enabled = false -- Невинных не подсвечиваем для чистоты экрана
                     end
                 else
                     hl.Enabled = false
@@ -132,7 +177,6 @@ local function updateESP()
     end
 end
 
--- Очистка подсветки при выходе игрока
 Players.PlayerRemoving:Connect(function(player)
     if highlights[player] then
         highlights[player]:Destroy()
@@ -140,17 +184,16 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
--- Поиск ближайшего убийцы для Аимбота
+-- Поиск цели для Аимбота (Ближайший убийца)
 local function getTargetMurderer()
     local target = nil
     local shortestDist = math.huge
     
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            local role = getRole(player)
-            if role == "Murderer" and player.Character and player.Character:FindFirstChild("Head") then
-                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-                if humanoid and humanoid.Health > 0 then
+            if getRole(player) == "Murderer" and player.Character and player.Character:FindFirstChild("Head") then
+                local hum = player.Character:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then
                     local pos, onScreen = Camera:WorldToViewportPoint(player.Character.Head.Position)
                     local dist = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
                     
@@ -165,42 +208,62 @@ local function getTargetMurderer()
     return target
 end
 
--- Обработка кнопок интерфейса
+-- Кнопки интерфейса
 EspBtn.MouseButton1Click:Connect(function()
     Config.ESPEnabled = not Config.ESPEnabled
-    if Config.ESPEnabled then
-        EspBtn.Text = "ESP: ВКЛ"
-        EspBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-    else
-        EspBtn.Text = "ESP: ВЫКЛ"
-        EspBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-        for _, hl in pairs(highlights) do
-            hl.Enabled = false
-        end
+    EspBtn.Text = Config.ESPEnabled and "ESP (Убийца:Красный / Шериф:Синий): ВКЛ" or "ESP: ВЫКЛ"
+    if not Config.ESPEnabled then
+        for _, hl in pairs(highlights) do hl.Enabled = false end
     end
 end)
 
 AimbotBtn.MouseButton1Click:Connect(function()
     Config.AimbotEnabled = not Config.AimbotEnabled
-    if Config.AimbotEnabled then
-        AimbotBtn.Text = "Аимбот на убийцу: ВКЛ"
-        AimbotBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-    else
-        AimbotBtn.Text = "Аимбот на убийцу: ВЫКЛ"
-        AimbotBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-    end
+    AimbotBtn.Text = Config.AimbotEnabled and "Нормальный Аимбот (на Убийцу): ВКЛ" or "Нормальный Аимбот (на Убийцу): ВЫКЛ"
+    AimbotBtn.BackgroundColor3 = Config.AimbotEnabled and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(50, 50, 50)
 end)
 
--- Оптимизированный главный цикл (выполняется плавно на каждый кадр)
+AutoGunBtn.MouseButton1Click:Connect(function()
+    Config.AutoPickGun = not Config.AutoPickGun
+    AutoGunBtn.Text = Config.AutoPickGun and "Авто-подбор пистолета: ВКЛ" or "Авто-подбор пистолета: ВЫКЛ"
+    AutoGunBtn.BackgroundColor3 = Config.AutoPickGun and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(50, 50, 50)
+end)
+
+-- Скин-чейнджер (Выдача визуального оружия из хранилища игры)
+SkinChangerBtn.MouseButton1Click:Connect(function()
+    pcall(function()
+        for _, v in pairs(ReplicatedStorage:GetDescendants()) do
+            if v:IsA("Tool") and (v.Name:lower():find("knife") or v.Name:lower():find("gun")) then
+                local clone = v:Clone()
+                clone.Parent = LocalPlayer.Backpack
+            end
+        end
+    end)
+    SkinChangerBtn.Text = "Скины выданы!"
+    task.wait(1.5)
+    SkinChangerBtn.Text = "Выдать Godly Скины (Скин-чейнджер)"
+end)
+
+-- Главный цикл обработки (RenderStepped) для оптимизированного отслеживания
 RunService.RenderStepped:Connect(function()
     if Config.ESPEnabled then
         updateESP()
     end
     
+    -- Аимбот (работает при зажатой ПКМ)
     if Config.AimbotEnabled and UserInputService:IsMouseButtonPressed(Config.AimbotKey) then
         local targetHead = getTargetMurderer()
         if targetHead then
             Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, targetHead.Position), 1 / Config.AimbotSmoothness)
+        end
+    end
+    
+    -- Авто-подбор упавшего пистолета
+    if Config.AutoPickGun and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        for _, drop in pairs(workspace:GetChildren()) do
+            if drop.Name == "GunDrop" and drop:IsA("BasePart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = drop.CFrame
+            end
         end
     end
 end)
