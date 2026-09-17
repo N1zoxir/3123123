@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
@@ -10,8 +9,7 @@ local Config = {
     SpeedHack = false,
     SpeedMult = 0.4,
     NoClip = false,
-    Fly = false,
-    AutoGun = false
+    Fly = false
 }
 
 -- UI Элементы
@@ -23,8 +21,8 @@ ScreenGui.ResetOnSpawn = false
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -240)
-MainFrame.Size = UDim2.new(0, 300, 0, 480)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+MainFrame.Size = UDim2.new(0, 300, 0, 390)
 MainFrame.Active = true
 MainFrame.Draggable = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
@@ -91,13 +89,11 @@ end
 
 local EspBtn = createBtn("ESP (Все роли): ВЫКЛ")
 local AimbotBtn = createBtn("Аимбот на Убийцу: ВЫКЛ")
-local SkinBtn = createBtn("Выдать Godly Скины (Визуал)")
 local SpeedBtn = createBtn("Спидхак (Bypass): ВЫКЛ")
 local NoclipBtn = createBtn("NoClip (Сквозь стены): ВЫКЛ")
 local FlyBtn = createBtn("Полет (Fly): ВЫКЛ")
 local AutoGunBtn = createBtn("Забрать Пистолет (АвтоTP)")
 local TpMurdererBtn = createBtn("Телепорт к Убийце")
-local TpLobbyBtn = createBtn("Телепорт в Лобби")
 
 -- Определение ролей игроков
 local function getRole(plr)
@@ -140,25 +136,6 @@ AimbotBtn.MouseButton1Click:Connect(function()
     Config.Aimbot = not Config.Aimbot
     AimbotBtn.Text = Config.Aimbot and "Аимбот на Убийцу: ВКЛ" or "Аимбот на Убийцу: ВЫКЛ"
     AimbotBtn.BackgroundColor3 = Config.Aimbot and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(45, 45, 45)
-end)
-
-SkinBtn.MouseButton1Click:Connect(function()
-    pcall(function()
-        local bp = LocalPlayer:FindFirstChild("Backpack")
-        if bp then
-            for _, v in pairs(ReplicatedStorage:GetDescendants()) do
-                if v:IsA("Tool") then
-                    local n = v.Name:lower()
-                    if n:find("knife") or n:find("gun") or n:find("blade") then
-                        v:Clone().Parent = bp
-                    end
-                end
-            end
-        end
-    end)
-    SkinBtn.Text = "Скины добавлены!"
-    task.wait(1.5)
-    SkinBtn.Text = "Выдать Godly Скины (Визуал)"
 end)
 
 SpeedBtn.MouseButton1Click:Connect(function()
@@ -208,12 +185,6 @@ TpMurdererBtn.MouseButton1Click:Connect(function()
     end
     task.wait(1.5)
     TpMurdererBtn.Text = "Телепорт к Убийце"
-end)
-
-TpLobbyBtn.MouseButton1Click:Connect(function()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-109, 138, 11)
-    end
 end)
 
 -- Стабильный цикл ESP (работает каждые 0.3 секунды)
