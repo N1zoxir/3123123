@@ -17,147 +17,177 @@ local Config = {
     NoClip = false,
     Fly = false,
     AutoFarm = false,
-    FarmDelay = 0.3, -- Задержка фарма по умолчанию
+    FarmDelay = 0.25,
     MaxCoins = 40,
     AutoGunLoop = false,
     AntiAFK = true,
     Fullbright = false
 }
 
--- Вспомогательная функция анимаций (Tween)
-local function animate(instance, properties, duration)
-    local tween = TweenService:Create(instance, TweenInfo.new(duration or 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), properties)
+-- Вспомогательная анимация
+local function animate(instance, properties, duration, style)
+    local tween = TweenService:Create(
+        instance, 
+        TweenInfo.new(duration or 0.2, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), 
+        properties
+    )
     tween:Play()
     return tween
 end
 
--- Проверка количества монет у игрока
+-- Точное получение количества монет
 local function getCoinCount()
     local count = 0
     pcall(function()
         local mainGui = LocalPlayer.PlayerGui:FindFirstChild("MainGui")
-        if mainGui and mainGui:FindFirstChild("Game") and mainGui.Game:FindFirstChild("CoinBag") then
-            local label = mainGui.Game.CoinBag:FindFirstChild("Amount") or mainGui.Game.CoinBag.Container:FindFirstChild("Amount")
-            if label and label:IsA("TextLabel") then
-                local current = label.Text:match("(%d+)")
-                if current then count = tonumber(current) end
+        if mainGui then
+            local coinBag = mainGui:FindFirstChild("CoinBag", true)
+            if coinBag then
+                local amountLabel = coinBag:FindFirstChild("Amount", true)
+                if amountLabel and amountLabel:IsA("TextLabel") then
+                    local text = amountLabel.Text
+                    local current = text:match("(%d+)")
+                    if current then count = tonumber(current) end
+                end
             end
         end
     end)
     return count
 end
 
--- Основной GUI
+-- Главная оболочка GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MM2_Ultimate_Mobile"
+ScreenGui.Name = "MM2_V3_Fixed"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
--- Плавная кнопка открытия (Floating Button)
+-- Всплывающие уведомления
+local function showNotify(text, color)
+    task.spawn(function()
+        local notifyFrame = Instance.new("Frame")
+        notifyFrame.Parent = ScreenGui
+        notifyFrame.Position = UDim2.new(0.5, -100, 0.1, 0)
+        notifyFrame.Size = UDim2.new(0, 200, 0, 32)
+        notifyFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+        notifyFrame.BackgroundTransparency = 1
+        notifyFrame.ZIndex = 100
+
+        local stroke = Instance.new("UIStroke", notifyFrame)
+        stroke.Color = color or Color3.fromRGB(0, 170, 255)
+        stroke.Thickness = 1.5
+        stroke.Transparency = 1
+
+        local corner = Instance.new("UICorner", notifyFrame)
+        corner.CornerRadius = UDim.new(0, 8)
+
+        local lbl = Instance.new("TextLabel", notifyFrame)
+        lbl.Size = UDim2.new(1, 0, 1, 0)
+        lbl.BackgroundTransparency = 1
+        lbl.Font = Enum.Font.GothamBold
+        lbl.Text = text
+        lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        lbl.TextSize = 11
+        lbl.TextTransparency = 1
+
+        animate(notifyFrame, {BackgroundTransparency = 0.1}, 0.25)
+        animate(stroke, {Transparency = 0}, 0.25)
+        animate(lbl, {TextTransparency = 0}, 0.25)
+
+        task.wait(1.8)
+
+        animate(notifyFrame, {BackgroundTransparency = 1}, 0.25)
+        animate(stroke, {Transparency = 1}, 0.25)
+        animate(lbl, {TextTransparency = 1}, 0.25)
+        task.wait(0.25)
+        notifyFrame:Destroy()
+    end)
+end
+
+-- Кнопка сбора/открытия HUB
 local OpenBtn = Instance.new("TextButton")
 OpenBtn.Parent = ScreenGui
-OpenBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-OpenBtn.Position = UDim2.new(0, 12, 0.2, 0)
-OpenBtn.Size = UDim2.new(0, 48, 0, 48)
+OpenBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+OpenBtn.Position = UDim2.new(0, 14, 0.3, 0)
+OpenBtn.Size = UDim2.new(0, 52, 0, 52)
 OpenBtn.Font = Enum.Font.GothamBold
 OpenBtn.Text = "HUB"
 OpenBtn.TextColor3 = Color3.fromRGB(0, 180, 255)
-OpenBtn.TextSize = 12
+OpenBtn.TextSize = 13
 OpenBtn.Active = true
 OpenBtn.Draggable = true
-Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(0, 14)
 
-local OpenStroke = Instance.new("UIStroke")
-OpenStroke.Parent = OpenBtn
+local OpenStroke = Instance.new("UIStroke", OpenBtn)
 OpenStroke.Color = Color3.fromRGB(0, 180, 255)
-OpenStroke.Thickness = 1.5
+OpenStroke.Thickness = 2
 
--- Главный контейнер
+-- Окно
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-MainFrame.Size = UDim2.new(0.85, 0, 0.72, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.Size = UDim2.new(0, 360, 0, 260)
+MainFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 18)
 MainFrame.ClipsDescendants = true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
-local MainConstraint = Instance.new("UISizeConstraint")
-MainConstraint.Parent = MainFrame
-MainConstraint.MaxSize = Vector2.new(420, 310)
-MainConstraint.MinSize = Vector2.new(290, 240)
-
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Parent = MainFrame
-MainStroke.Color = Color3.fromRGB(40, 40, 55)
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(45, 45, 60)
 MainStroke.Thickness = 1.5
 
--- Верхняя панель (Header)
-local TopBar = Instance.new("Frame")
-TopBar.Parent = MainFrame
-TopBar.Size = UDim2.new(1, 0, 0, 38)
-TopBar.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+-- Шляпка
+local TopBar = Instance.new("Frame", MainFrame)
+TopBar.Size = UDim2.new(1, 0, 0, 36)
+TopBar.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
 
-local Title = Instance.new("TextLabel")
-Title.Parent = TopBar
+local Title = Instance.new("TextLabel", TopBar)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Size = UDim2.new(0.6, 0, 1, 0)
+Title.Size = UDim2.new(0.7, 0, 1, 0)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBold
-Title.Text = "MM2 HUB v3.0"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 13
+Title.Text = "MM2 ULTIMATE // V3.1"
+Title.TextColor3 = Color3.fromRGB(240, 240, 255)
+Title.TextSize = 12
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Parent = TopBar
-CloseBtn.Position = UDim2.new(1, -30, 0.5, -10)
+local CloseBtn = Instance.new("TextButton", TopBar)
+CloseBtn.Position = UDim2.new(1, -28, 0.5, -10)
 CloseBtn.Size = UDim2.new(0, 20, 0, 20)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(230, 50, 60)
 CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.Text = "×"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.TextSize = 14
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+CloseBtn.TextSize = 13
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 5)
 
--- Открытие / Закрытие с анимацией
-CloseBtn.MouseButton1Click:Connect(function()
-    animate(MainFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.25)
-    task.wait(0.25)
-    MainFrame.Visible = false
-    MainFrame.Size = UDim2.new(0.85, 0, 0.72, 0)
-end)
-
-OpenBtn.MouseButton1Click:Connect(function()
-    if not MainFrame.Visible then
-        MainFrame.Size = UDim2.new(0, 0, 0, 0)
+-- Переключение интерфейса с анимацией масштабирования
+local isMenuOpen = true
+local function toggleMenu()
+    isMenuOpen = not isMenuOpen
+    if isMenuOpen then
         MainFrame.Visible = true
-        animate(MainFrame, {Size = UDim2.new(0.85, 0, 0.72, 0)}, 0.25)
+        animate(MainFrame, {Size = UDim2.new(0, 360, 0, 260)}, 0.25, Enum.EasingStyle.Back)
     else
-        animate(MainFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.25)
-        task.wait(0.25)
+        animate(MainFrame, {Size = UDim2.new(0, 0, 0, 0)}, 0.2, Enum.EasingStyle.Quad)
+        task.wait(0.2)
         MainFrame.Visible = false
-        MainFrame.Size = UDim2.new(0.85, 0, 0.72, 0)
     end
-end)
+end
 
--- Панель Категорий (Анимированная)
-local TabBar = Instance.new("ScrollingFrame")
-TabBar.Parent = MainFrame
-TabBar.Position = UDim2.new(0, 6, 0, 42)
-TabBar.Size = UDim2.new(1, -12, 0, 32)
+OpenBtn.MouseButton1Click:Connect(toggleMenu)
+CloseBtn.MouseButton1Click:Connect(toggleMenu)
+
+-- Вкладки
+local TabBar = Instance.new("Frame", MainFrame)
+TabBar.Position = UDim2.new(0, 8, 0, 42)
+TabBar.Size = UDim2.new(1, -16, 0, 30)
 TabBar.BackgroundTransparency = 1
-TabBar.ScrollBarThickness = 0
-TabBar.CanvasSize = UDim2.new(1.15, 0, 0, 0)
 
-local TabList = Instance.new("UIListLayout")
-TabList.Parent = TabBar
+local TabList = Instance.new("UIListLayout", TabBar)
 TabList.FillDirection = Enum.FillDirection.Horizontal
-TabList.Padding = UDim.new(0, 6)
+TabList.Padding = UDim.new(0, 5)
 
--- Контейнер страниц
-local PageContainer = Instance.new("Frame")
-PageContainer.Parent = MainFrame
+local PageContainer = Instance.new("Frame", MainFrame)
 PageContainer.Position = UDim2.new(0, 8, 0, 78)
 PageContainer.Size = UDim2.new(1, -16, 1, -84)
 PageContainer.BackgroundTransparency = 1
@@ -166,39 +196,37 @@ local pages = {}
 local tabButtons = {}
 
 local function createPage()
-    local page = Instance.new("ScrollingFrame")
-    page.Parent = PageContainer
+    local page = Instance.new("ScrollingFrame", PageContainer)
     page.Size = UDim2.new(1, 0, 1, 0)
     page.BackgroundTransparency = 1
     page.ScrollBarThickness = 2
+    page.ScrollBarImageColor3 = Color3.fromRGB(0, 180, 255)
     page.Visible = false
 
-    local layout = Instance.new("UIListLayout")
-    layout.Parent = page
+    local layout = Instance.new("UIListLayout", page)
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     layout.Padding = UDim.new(0, 6)
 
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 8)
+        page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 6)
     end)
     return page
 end
 
 local function createTabBtn(text, targetPage)
-    local btn = Instance.new("TextButton")
-    btn.Parent = TabBar
-    btn.Size = UDim2.new(0, 78, 1, 0)
-    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+    local btn = Instance.new("TextButton", TabBar)
+    btn.Size = UDim2.new(0, 65, 1, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
     btn.Font = Enum.Font.GothamBold
     btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(150, 150, 170)
-    btn.TextSize = 11
+    btn.TextColor3 = Color3.fromRGB(130, 130, 150)
+    btn.TextSize = 10
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
     btn.MouseButton1Click:Connect(function()
         for _, p in pairs(pages) do p.Visible = false end
         for _, b in pairs(tabButtons) do
-            animate(b, {BackgroundColor3 = Color3.fromRGB(25, 25, 32), TextColor3 = Color3.fromRGB(150, 150, 170)}, 0.15)
+            animate(b, {BackgroundColor3 = Color3.fromRGB(24, 24, 32), TextColor3 = Color3.fromRGB(130, 130, 150)}, 0.15)
         end
         targetPage.Visible = true
         animate(btn, {BackgroundColor3 = Color3.fromRGB(0, 140, 255), TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.15)
@@ -209,7 +237,6 @@ local function createTabBtn(text, targetPage)
     return btn
 end
 
--- Создание Вкладок
 local VisualsPage = createPage()
 local MovementPage = createPage()
 local FarmPage = createPage()
@@ -226,298 +253,192 @@ VisualsPage.Visible = true
 Tab1.BackgroundColor3 = Color3.fromRGB(0, 140, 255)
 Tab1.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- Конструктор анимированных кнопок
-local function createToggleBtn(parent, text)
-    local btn = Instance.new("TextButton")
-    btn.Parent = parent
-    btn.BackgroundColor3 = Color3.fromRGB(26, 26, 34)
-    btn.Size = UDim2.new(0.98, 0, 0, 34)
-    btn.Font = Enum.Font.GothamMedium
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(200, 200, 210)
-    btn.TextSize = 11
+-- Конструктор Переключателей с АНИМИРОВАННЫМ Тумблером (Toggle Switch)
+local function createToggle(parent, titleText, callback)
+    local container = Instance.new("Frame", parent)
+    container.Size = UDim2.new(0.98, 0, 0, 34)
+    container.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+    Instance.new("UICorner", container).CornerRadius = UDim.new(0, 6)
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Parent = btn
-    stroke.Color = Color3.fromRGB(40, 40, 50)
+    local stroke = Instance.new("UIStroke", container)
+    stroke.Color = Color3.fromRGB(35, 35, 48)
     stroke.Thickness = 1
 
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    local label = Instance.new("TextLabel", container)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Size = UDim2.new(0.65, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamMedium
+    label.Text = titleText
+    label.TextColor3 = Color3.fromRGB(200, 200, 220)
+    label.TextSize = 11
+    label.TextXAlignment = Enum.TextXAlignment.Left
 
-    -- Анимация при касании пальцем
-    btn.MouseButton1Down:Connect(function()
-        animate(btn, {Size = UDim2.new(0.95, 0, 0, 32)}, 0.1)
-    end)
-    btn.MouseButton1Up:Connect(function()
-        animate(btn, {Size = UDim2.new(0.98, 0, 0, 34)}, 0.1)
+    -- Сам переключатель
+    local switchBg = Instance.new("Frame", container)
+    switchBg.Position = UDim2.new(1, -44, 0.5, -9)
+    switchBg.Size = UDim2.new(0, 36, 0, 18)
+    switchBg.BackgroundColor3 = Color3.fromRGB(40, 40, 52)
+    Instance.new("UICorner", switchBg).CornerRadius = UDim.new(1, 0)
+
+    local knob = Instance.new("Frame", switchBg)
+    knob.Position = UDim2.new(0, 2, 0.5, -7)
+    knob.Size = UDim2.new(0, 14, 0, 14)
+    knob.BackgroundColor3 = Color3.fromRGB(180, 180, 200)
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    local state = false
+
+    local clickBtn = Instance.new("TextButton", container)
+    clickBtn.Size = UDim2.new(1, 0, 1, 0)
+    clickBtn.BackgroundTransparency = 1
+    clickBtn.Text = ""
+
+    clickBtn.MouseButton1Click:Connect(function()
+        state = not state
+        if state then
+            animate(knob, {Position = UDim2.new(1, -16, 0.5, -7), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}, 0.2)
+            animate(switchBg, {BackgroundColor3 = Color3.fromRGB(0, 180, 100)}, 0.2)
+            animate(stroke, {Color = Color3.fromRGB(0, 200, 110)}, 0.2)
+            showNotify(titleText .. ": Включаю", Color3.fromRGB(0, 200, 110))
+        else
+            animate(knob, {Position = UDim2.new(0, 2, 0.5, -7), BackgroundColor3 = Color3.fromRGB(180, 180, 200)}, 0.2)
+            animate(switchBg, {BackgroundColor3 = Color3.fromRGB(40, 40, 52)}, 0.2)
+            animate(stroke, {Color = Color3.fromRGB(35, 35, 48)}, 0.2)
+            showNotify(titleText .. ": Выключаю", Color3.fromRGB(230, 60, 60))
+        end
+        callback(state)
     end)
 
-    return btn, stroke
+    return container
 end
 
-local function toggleState(btn, stroke, state, textOn, textOff)
-    if state then
-        btn.Text = textOn
-        animate(btn, {BackgroundColor3 = Color3.fromRGB(0, 140, 80)}, 0.2)
-        animate(stroke, {Color = Color3.fromRGB(0, 210, 120)}, 0.2)
-    else
-        btn.Text = textOff
-        animate(btn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.2)
-        animate(stroke, {Color = Color3.fromRGB(40, 40, 50)}, 0.2)
-    end
-end
+-- ЭЛЕМЕНТЫ УПРАВЛЕНИЯ
 
--- 1. ВИЗУАЛЫ
-local EspBtn, EspStroke = createToggleBtn(VisualsPage, "ESP Ролей: ВЫКЛ")
-local CoinEspBtn, CoinEspStroke = createToggleBtn(VisualsPage, "ESP Монет: ВЫКЛ")
-local AimbotBtn, AimbotStroke = createToggleBtn(VisualsPage, "Аимбот на Убийцу: ВЫКЛ")
+-- Visuals
+createToggle(VisualsPage, "ESP Ролей", function(val) Config.ESP = val end)
+createToggle(VisualsPage, "ESP Монет", function(val) Config.CoinESP = val end)
+createToggle(VisualsPage, "Аимбот на Убийцу", function(val) Config.Aimbot = val end)
 
--- 2. ДВИЖЕНИЕ
-local SpeedBtn, SpeedStroke = createToggleBtn(MovementPage, "Спидхак: ВЫКЛ")
-local NoclipBtn, NoclipStroke = createToggleBtn(MovementPage, "NoClip: ВЫКЛ")
-local FlyBtn, FlyStroke = createToggleBtn(MovementPage, "Полет (Fly): ВЫКЛ")
+-- Movement
+createToggle(MovementPage, "Спидхак (Быстрый бег)", function(val) Config.SpeedHack = val end)
+createToggle(MovementPage, "Проход сквозь стены (NoClip)", function(val) Config.NoClip = val end)
+createToggle(MovementPage, "Режим Полета (Fly)", function(val) Config.Fly = val end)
 
--- 3. ФАРМ (С настройками)
-local CoinStatusLabel = Instance.new("TextLabel")
-CoinStatusLabel.Parent = FarmPage
-CoinStatusLabel.Size = UDim2.new(0.98, 0, 0, 24)
-CoinStatusLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
+-- Farm
+local CoinStatusLabel = Instance.new("TextLabel", FarmPage)
+CoinStatusLabel.Size = UDim2.new(0.98, 0, 0, 26)
+CoinStatusLabel.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 CoinStatusLabel.Font = Enum.Font.GothamBold
-CoinStatusLabel.Text = "Статус Мешка: 0 / 40"
-CoinStatusLabel.TextColor3 = Color3.fromRGB(255, 200, 80)
+CoinStatusLabel.Text = "Мешок: 0 / 40"
+CoinStatusLabel.TextColor3 = Color3.fromRGB(255, 210, 80)
 CoinStatusLabel.TextSize = 11
-Instance.new("UICorner", CoinStatusLabel).CornerRadius = UDim.new(0, 5)
+Instance.new("UICorner", CoinStatusLabel).CornerRadius = UDim.new(0, 6)
 
-local FarmBtn, FarmStroke = createToggleBtn(FarmPage, "Авто-Сбор Монет: ВЫКЛ")
+createToggle(FarmPage, "Авто-Сбор Монет", function(val) Config.AutoFarm = val end)
 
-local SpeedSettingBtn = Instance.new("TextButton")
-SpeedSettingBtn.Parent = FarmPage
-SpeedSettingBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 42)
+local SpeedSettingBtn = Instance.new("TextButton", FarmPage)
 SpeedSettingBtn.Size = UDim2.new(0.98, 0, 0, 32)
+SpeedSettingBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
 SpeedSettingBtn.Font = Enum.Font.GothamMedium
-SpeedSettingBtn.Text = "Задержка Фарма: Нормально (0.3s)"
-SpeedSettingBtn.TextColor3 = Color3.fromRGB(180, 180, 200)
+SpeedSettingBtn.Text = "Скорость Фарма: Средняя (0.25s)"
+SpeedSettingBtn.TextColor3 = Color3.fromRGB(200, 200, 220)
 SpeedSettingBtn.TextSize = 10
 Instance.new("UICorner", SpeedSettingBtn).CornerRadius = UDim.new(0, 6)
 
 SpeedSettingBtn.MouseButton1Click:Connect(function()
-    if Config.FarmDelay == 0.3 then
+    if Config.FarmDelay == 0.25 then
         Config.FarmDelay = 0.1
-        SpeedSettingBtn.Text = "Задержка Фарма: Быстро (0.1s)"
+        SpeedSettingBtn.Text = "Скорость Фарма: Быстрая (0.1s)"
     elseif Config.FarmDelay == 0.1 then
-        Config.FarmDelay = 0.5
-        SpeedSettingBtn.Text = "Задержка Фарма: Медленно (0.5s)"
+        Config.FarmDelay = 0.4
+        SpeedSettingBtn.Text = "Скорость Фарма: Медленная (0.4s)"
     else
-        Config.FarmDelay = 0.3
-        SpeedSettingBtn.Text = "Задержка Фарма: Нормально (0.3s)"
+        Config.FarmDelay = 0.25
+        SpeedSettingBtn.Text = "Скорость Фарма: Средняя (0.25s)"
     end
 end)
 
--- 4. ТЕЛЕПОРТЫ
-local TpMurdererBtn, _ = createToggleBtn(TeleportPage, "ТП за спину Убийце")
-local AutoGunBtn, _ = createToggleBtn(TeleportPage, "Забрать Пистолет")
-
--- 5. РАЗНОЕ
-local AutoGunLoopBtn, AutoGunLoopStroke = createToggleBtn(MiscPage, "Авто-подбор пистолета (Петля): ВЫКЛ")
-local FullbrightBtn, FullbrightStroke = createToggleBtn(MiscPage, "Макс. Яркость (Fullbright): ВЫКЛ")
-local AntiAfkBtn, AntiAfkStroke = createToggleBtn(MiscPage, "Anti-AFK Защита: ВКЛ")
-toggleState(AntiAfkBtn, AntiAfkStroke, true, "Anti-AFK Защита: ВКЛ", "Anti-AFK Защита: ВЫКЛ")
-
--- Определение Ролей
-local function getRole(plr)
-    if not plr or not plr.Character then return "Innocent" end
-    local containers = {plr.Character, plr:FindFirstChild("Backpack")}
-    for _, parentObj in ipairs(containers) do
-        if parentObj then
-            for _, item in ipairs(parentObj:GetChildren()) do
-                if item:IsA("Tool") then
-                    local name = item.Name:lower()
-                    if name:find("knife") or name:find("blade") or name:find("scythe") or name:find("slash") then
-                        return "Murderer"
-                    elseif name:find("gun") or name:find("revolver") or name:find("sheriff") then
-                        return "Sheriff"
-                    end
-                end
-            end
-        end
-    end
-    return "Innocent"
+-- Teleport Buttons
+local function createActionBtn(parent, text, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(0.98, 0, 0, 32)
+    btn.BackgroundColor3 = Color3.fromRGB(26, 26, 36)
+    btn.Font = Enum.Font.GothamMedium
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(220, 220, 240)
+    btn.TextSize = 11
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
 end
 
--- Логика кнопок
-EspBtn.MouseButton1Click:Connect(function()
-    Config.ESP = not Config.ESP
-    toggleState(EspBtn, EspStroke, Config.ESP, "ESP Ролей: ВКЛ", "ESP Ролей: ВЫКЛ")
-    if not Config.ESP then
-        for _, p in pairs(Players:GetPlayers()) do
-            if p.Character and p.Character:FindFirstChild("RoleHighlight") then
-                p.Character.RoleHighlight:Destroy()
-            end
-        end
-    end
-end)
-
-CoinEspBtn.MouseButton1Click:Connect(function()
-    Config.CoinESP = not Config.CoinESP
-    toggleState(CoinEspBtn, CoinEspStroke, Config.CoinESP, "ESP Монет: ВКЛ", "ESP Монет: ВЫКЛ")
-    if not Config.CoinESP then
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:FindFirstChild("CoinHighlight") then
-                obj.CoinHighlight:Destroy()
-            end
-        end
-    end
-end)
-
-AimbotBtn.MouseButton1Click:Connect(function()
-    Config.Aimbot = not Config.Aimbot
-    toggleState(AimbotBtn, AimbotStroke, Config.Aimbot, "Аимбот на Убийцу: ВКЛ", "Аимбот на Убийцу: ВЫКЛ")
-end)
-
-SpeedBtn.MouseButton1Click:Connect(function()
-    Config.SpeedHack = not Config.SpeedHack
-    toggleState(SpeedBtn, SpeedStroke, Config.SpeedHack, "Спидхак: ВКЛ", "Спидхак: ВЫКЛ")
-end)
-
-NoclipBtn.MouseButton1Click:Connect(function()
-    Config.NoClip = not Config.NoClip
-    toggleState(NoclipBtn, NoclipStroke, Config.NoClip, "NoClip: ВКЛ", "NoClip: ВЫКЛ")
-end)
-
-FlyBtn.MouseButton1Click:Connect(function()
-    Config.Fly = not Config.Fly
-    toggleState(FlyBtn, FlyStroke, Config.Fly, "Полет (Fly): ВКЛ", "Полет (Fly): ВЫКЛ")
-end)
-
-FarmBtn.MouseButton1Click:Connect(function()
-    Config.AutoFarm = not Config.AutoFarm
-    toggleState(FarmBtn, FarmStroke, Config.AutoFarm, "Авто-Сбор Монет: ВКЛ", "Авто-Сбор Монет: ВЫКЛ")
-end)
-
-AutoGunLoopBtn.MouseButton1Click:Connect(function()
-    Config.AutoGunLoop = not Config.AutoGunLoop
-    toggleState(AutoGunLoopBtn, AutoGunLoopStroke, Config.AutoGunLoop, "Авто-подбор пистолета: ВКЛ", "Авто-подбор пистолета: ВЫКЛ")
-end)
-
-FullbrightBtn.MouseButton1Click:Connect(function()
-    Config.Fullbright = not Config.Fullbright
-    toggleState(FullbrightBtn, FullbrightStroke, Config.Fullbright, "Макс. Яркость: ВКЛ", "Макс. Яркость: ВЫКЛ")
-    if Config.Fullbright then
-        game:GetService("Lighting").Ambient = Color3.fromRGB(255, 255, 255)
-    else
-        game:GetService("Lighting").Ambient = Color3.fromRGB(127, 127, 127)
-    end
-end)
-
-AntiAfkBtn.MouseButton1Click:Connect(function()
-    Config.AntiAFK = not Config.AntiAFK
-    toggleState(AntiAfkBtn, AntiAfkStroke, Config.AntiAFK, "Anti-AFK Защита: ВКЛ", "Anti-AFK Защита: ВЫКЛ")
-end)
-
-TpMurdererBtn.MouseButton1Click:Connect(function()
+createActionBtn(TeleportPage, "ТП за спину Убийце", function()
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and getRole(p) == "Murderer" and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5)
-                TpMurdererBtn.Text = "ТП Выполнен!"
-                task.wait(1)
-                TpMurdererBtn.Text = "ТП за спину Убийце"
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local isMurderer = false
+            for _, item in ipairs(p.Character:GetChildren()) do
+                if item:IsA("Tool") and item.Name:lower():find("knife") then isMurderer = true end
+            end
+            if isMurderer and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 4)
+                showNotify("ТП к Убийце сработал", Color3.fromRGB(0, 200, 110))
                 return
             end
         end
     end
-    TpMurdererBtn.Text = "Убийца не найден!"
-    task.wait(1)
-    TpMurdererBtn.Text = "ТП за спину Убийце"
+    showNotify("Убийца не найден!", Color3.fromRGB(230, 60, 60))
 end)
 
-AutoGunBtn.MouseButton1Click:Connect(function()
-    local gunDrop = workspace:FindFirstChild("GunDrop", true) or workspace:FindFirstChild("Gun", true)
-    if gunDrop and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        LocalPlayer.Character.HumanoidRootPart.CFrame = gunDrop.CFrame + Vector3.new(0, 2, 0)
-        AutoGunBtn.Text = "Пистолет поднят!"
+createActionBtn(TeleportPage, "Забрать Выпавший Пистолет", function()
+    local gun = workspace:FindFirstChild("GunDrop", true) or workspace:FindFirstChild("Gun", true)
+    if gun and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = gun.CFrame + Vector3.new(0, 2, 0)
+        showNotify("Пистолет забран!", Color3.fromRGB(0, 200, 110))
     else
-        AutoGunBtn.Text = "Пистолета нет!"
+        showNotify("Пистолета на карте нет!", Color3.fromRGB(230, 60, 60))
     end
-    task.wait(1)
-    AutoGunBtn.Text = "Забрать Пистолет"
 end)
 
--- УМНЫЙ АВТОФАРМ МОНЕТ С ПРОВЕРКОЙ НА 40 МОНЕТ
+-- Misc
+createToggle(MiscPage, "Авто-подбор пистолета (Петля)", function(val) Config.AutoGunLoop = val end)
+createToggle(MiscPage, "Максимальная Яркость", function(val)
+    Config.Fullbright = val
+    game:GetService("Lighting").Ambient = val and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(127, 127, 127)
+end)
+createToggle(MiscPage, "Anti-AFK Защита", function(val) Config.AntiAFK = val end)
+
+-- РАБОЧИЙ ЛОГИЧЕСКИЙ БЛОК (АВТОФАРМ)
 task.spawn(function()
     while true do
         task.wait(Config.FarmDelay)
-        local currentCoins = getCoinCount()
-        CoinStatusLabel.Text = string.format("Статус Мешка: %d / %d", currentCoins, Config.MaxCoins)
+        local count = getCoinCount()
+        CoinStatusLabel.Text = string.format("Мешок: %d / %d", count, Config.MaxCoins)
 
-        if currentCoins >= Config.MaxCoins and Config.AutoFarm then
-            Config.AutoFarm = false
-            toggleState(FarmBtn, FarmStroke, false, "Авто-Сбор Монет: ВКЛ", "Авто-Сбор Монет: ВЫКЛ (МЕШОК ПОЛОН!)")
-            CoinStatusLabel.TextColor3 = Color3.fromRGB(80, 255, 100)
-        elseif Config.AutoFarm and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            CoinStatusLabel.TextColor3 = Color3.fromRGB(255, 200, 80)
-            local targetCoin = nil
-
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if (obj.Name == "Coin" or obj.Name == "CoinServer") and obj:IsA("BasePart") then
-                    targetCoin = obj
-                    break
-                end
-            end
-
-            if targetCoin then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = targetCoin.CFrame
-            end
-        end
-    end
-end)
-
--- АВТО-ПОДБОР ПИСТОЛЕТА (Петля)
-task.spawn(function()
-    while task.wait(0.5) do
-        if Config.AutoGunLoop and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local gunDrop = workspace:FindFirstChild("GunDrop", true) or workspace:FindFirstChild("Gun", true)
-            if gunDrop then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = gunDrop.CFrame + Vector3.new(0, 2, 0)
-            end
-        end
-    end
-end)
-
--- COIN ESP И ИГРОКИ ESP
-task.spawn(function()
-    while task.wait(0.4) do
-        if Config.ESP then
-            for _, p in pairs(Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                    local role = getRole(p)
-                    local hl = p.Character:FindFirstChild("RoleHighlight")
-                    if not hl then
-                        hl = Instance.new("Highlight")
-                        hl.Name = "RoleHighlight"
-                        hl.Parent = p.Character
-                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                    end
-                    if role == "Murderer" then
-                        hl.FillColor = Color3.fromRGB(255, 40, 40)
-                    elseif role == "Sheriff" then
-                        hl.FillColor = Color3.fromRGB(40, 140, 255)
-                    else
-                        hl.FillColor = Color3.fromRGB(40, 255, 100)
+        if Config.AutoFarm then
+            if count >= Config.MaxCoins then
+                Config.AutoFarm = false
+                showNotify("Мешок полон (40/40)! Фарм остановлен.", Color3.fromRGB(255, 200, 0))
+            else
+                local targetCoin = nil
+                -- Поиск монеты по всей рабочей зоне
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if (obj.Name == "Coin" or obj.Name == "CoinServer" or obj.Name == "MainCoin") and obj:IsA("BasePart") then
+                        if obj.Transparency < 0.9 then
+                            targetCoin = obj
+                            break
+                        end
                     end
                 end
-            end
-        end
 
-        if Config.CoinESP then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if (obj.Name == "Coin" or obj.Name == "CoinServer") and obj:IsA("BasePart") then
-                    if not obj:FindFirstChild("CoinHighlight") then
-                        local hl = Instance.new("Highlight")
-                        hl.Name = "CoinHighlight"
-                        hl.Parent = obj
-                        hl.FillColor = Color3.fromRGB(255, 220, 0)
-                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                if targetCoin and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local hrp = LocalPlayer.Character.HumanoidRootPart
+                    hrp.CFrame = targetCoin.CFrame
+                    -- Принудительное подбирание монеты на мобильных устройствах
+                    if firetouchinterest then
+                        firetouchinterest(hrp, targetCoin, 0)
+                        task.wait(0.01)
+                        firetouchinterest(hrp, targetCoin, 1)
                     end
                 end
             end
@@ -525,31 +446,13 @@ task.spawn(function()
     end
 end)
 
--- ANTI-AFK СИСТЕМА
-LocalPlayer.Idled:Connect(function()
-    if Config.AntiAFK then
-        VirtualUser:Button2Down(Vector2.new(0,0), Camera.CFrame)
-        task.wait(1)
-        VirtualUser:Button2Up(Vector2.new(0,0), Camera.CFrame)
-    end
-end)
-
--- РЕНДЕР ДВИЖЕНИЯ И АИМБОТА
+-- РЕНДЕР КАДРОВ (ESP, Speed, Fly, Aimbot)
 RunService.RenderStepped:Connect(function(dt)
     if Config.SpeedHack and LocalPlayer.Character then
         local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
         local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if hum and hrp and hum.MoveDirection.Magnitude > 0 then
-            hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (Config.SpeedValue * dt * 1.6))
-        end
-    end
-
-    if Config.Aimbot then
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and getRole(p) == "Murderer" and p.Character and p.Character:FindFirstChild("Head") then
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, p.Character.Head.Position)
-                break
-            end
+            hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (Config.SpeedValue * dt * 1.5))
         end
     end
 
@@ -561,20 +464,26 @@ RunService.RenderStepped:Connect(function(dt)
             local moveDir = hum.MoveDirection
             if moveDir.Magnitude > 0 then
                 hrp.CFrame = hrp.CFrame + (Camera.CFrame.LookVector * (moveDir.Z * -1) + Camera.CFrame.RightVector * moveDir.X) * 1.2
-            else
-                hrp.CFrame = CFrame.new(hrp.CFrame.Position, hrp.CFrame.Position + Camera.CFrame.LookVector)
             end
         end
     end
 end)
 
--- NOCLIP
 RunService.Stepped:Connect(function()
     if Config.NoClip and LocalPlayer.Character then
         for _, part in pairs(LocalPlayer.Character:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
+            if part:IsA("BasePart") then part.CanCollide = false end
         end
     end
 end)
+
+-- Anti-AFK
+LocalPlayer.Idled:Connect(function()
+    if Config.AntiAFK then
+        VirtualUser:Button2Down(Vector2.new(0,0), Camera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0,0), Camera.CFrame)
+    end
+end)
+
+showNotify("Скрипт успешно загружен!", Color3.fromRGB(0, 200, 110))
